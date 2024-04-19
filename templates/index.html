@@ -108,4 +108,66 @@
 
         function removeRow() {
             if (rowCount > 1) {
-                
+                rowCount--;
+                createMatrix();
+            }
+        }
+
+        function removeColumn() {
+            if (colCount > 1) {
+                colCount--;
+                createMatrix();
+            }
+        }
+
+        function submitMatrix() {
+            const matrix = [];
+            for (let i = 0; i < rowCount; i++) {
+                const row = [];
+                for (let j = 0; j < colCount; j++) {
+                    const input = $(`#matrix-input-${i}-${j}`);
+                    row.push(parseFloat(input.val()) || 0);
+                }
+                matrix.push(row);
+            }
+
+            const calcType = $('#calculationType').val();
+            const url = `/decompose/${calcType}`;
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({matrix}),
+                success: function(response) {
+                    console.log("AJAX Response:", response);
+                    $('#results').empty().append('<h2>Calculation Results:</h2>');
+
+                    if (calcType === 'qr') { // QR DECOMP
+                        $('#results').html(`<h2>Matrix Q:</h2><div>$$ ${response.qr.Q} $$</div><h2>Matrix R:</h2><div>$$ ${response.qr.R} $$</div>`);
+
+                    } else if (calcType === 'gs') { // GRAM 
+                        $('#results').html(`<h2>Orthogonal Vectors:</h2><div>$$ ${response.gs.orthogonal_vectors} $$</div>`);
+                    }
+                    $('#results').append('<h2>Intermediary Steps:</h2>');
+
+                    response.intermediary_steps.explanations.forEach(exp => {
+                        const stepDiv = $('<div class="step-explanation"></div>');
+                        stepDiv.html("\\["+ exp+"\\]"); // Bound with the MathJax identifiers so recongiazble in the html
+                        $('#results').append(stepDiv);
+                    });
+
+                    // Request MathJax to typeset the new content
+                    MathJax.typesetPromise();
+                },
+                error: function(error) {
+                    console.log("Error:", error);
+                }
+            });
+        }
+
+        // Initial call to create the default matrix size
+        createMatrix();
+    </script>
+</body>
+</html>
