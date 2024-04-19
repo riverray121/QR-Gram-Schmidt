@@ -1,69 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>QR Decomposition</title>
+    <meta charset="UTF-8">
+    <title>Matrix Decomposition Calculator</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <!-- Include jQuery for AJAX requests -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']],
+          processEscapes: true,
+          processEnvironments: true
+        },
+        chtml: {
+            scale: 0.8, // scale down globally by 25%
+        },
+        options: {
+          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+          ignoreHtmlClass: 'tex2jax_ignore',
+          processHtmlClass: 'tex2jax_process'
+        },
+        startup: {
+          pageReady: () => {
+            return MathJax.startup.defaultPageReady();
+          }
+        }
+      };
+    </script>
+    <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        .matrix-row {
-            display: flex;
-            margin-bottom: 5px;
+        body { font-family: Arial, sans-serif; background-color: #f7f7f7; }
+        .container { max-width: 900px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+        .matrix-input { width: 50px; margin: 5px; text-align: center; }
+        .button-row { text-align: center; margin-top: 20px; }
+        button { padding: 10px 15px; margin-right: 10px; }
+        #results { margin-top: 20px; }
+        #results h2 {
+            overflow-x: auto;
+            white-space: nowrap;
         }
-        .matrix-input {
-            width: 50px;
-            margin-right: 5px;
-            text-align: center;
-        }
-        button {
-            margin-right: 5px;
-            margin-top: 10px;
-        }
-        #results {
-            margin-top: 20px;
-        }
+        .step-explanation { background-color: #eef; border-left: 4px solid #00f; padding: 10px; margin: 10px 0; }
+        .matrix-display { display: grid; grid-gap: 5px; margin-bottom: 10px; }
+        .matrix-row { display: flex; justify-content: center; }
+        .matrix-bracket { font-size: 24px; line-height: 0; vertical-align: middle; }
+        .calculation-step { margin-bottom: 20px; }
+        .calculation-matrix { text-align: center; }
     </style>
 </head>
 <body>
-    <h1>QR Decomposition Calculator</h1>
-    <img src="../static/images/chen.png" alt="Descriptive Alt Text" width="200">
-    
-    <!-- Matrix input form -->
-    <div id="matrix-container">
-        <!-- Matrix inputs will be dynamically added here -->
-    </div>
-    
-    <button onclick="addRow()">Add Row</button>
-    <button onclick="addColumn()">Add Column</button>
-    <button onclick="removeRow()">Remove Row</button>
-    <button onclick="removeColumn()">Remove Column</button>
-    <button onclick="submitMatrix()">Calculate</button>
+    <div class="container">
+        <h1>Matrix Decomposition Calculator</h1>
+        <div>
+            <label for="calculationType">Choose a method:</label>
+            <select id="calculationType">
+                <option value="qr">QR Decomposition</option>
+                <option value="gs">Gram-Schmidt Process</option>
+            </select>
+        </div>
 
-    <!-- Results display section -->
-    <div id="results">
-        <!-- The calculation results will be displayed here -->
+        <div class="matrix-display" id="matrix-container"></div>
+
+        <div class="button-row">
+            <button onclick="addRow()">Add Row</button>
+            <button onclick="addColumn()">Add Column</button>
+            <button onclick="removeRow()">Remove Row</button>
+            <button onclick="removeColumn()">Remove Column</button>
+            <button id="submitMatrix" onclick="submitMatrix()">Calculate</button>
+        </div>
+
+        <div id="results"></div>
     </div>
 
     <script>
+        // Default matrix size
         let rowCount = 2;
         let colCount = 2;
 
+        // Create the matrix form
         function createMatrix() {
-            const container = document.getElementById('matrix-container');
-            container.innerHTML = ''; // Clear the previous matrix
-
+            const container = $('#matrix-container');
+            container.empty();
             for (let i = 0; i < rowCount; i++) {
-                const rowDiv = document.createElement('div');
-                rowDiv.className = 'matrix-row';
+                const rowDiv = $('<div>').addClass('matrix-row');
                 for (let j = 0; j < colCount; j++) {
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'matrix-input';
-                    input.placeholder = `A[${i+1},${j+1}]`;
-                    rowDiv.appendChild(input);
+                    const input = $('<input>').attr({
+                        type: 'text',
+                        id: `matrix-input-${i}-${j}`,
+                        'class': 'matrix-input',
+                        placeholder: `0`
+                    });
+                    rowDiv.append(input);
                 }
-                container.appendChild(rowDiv);
+                container.append(rowDiv);
             }
         }
 
@@ -96,30 +125,48 @@
             for (let i = 0; i < rowCount; i++) {
                 const row = [];
                 for (let j = 0; j < colCount; j++) {
-                    const input = document.querySelector(`.matrix-row:nth-child(${i + 1}) .matrix-input:nth-child(${j + 1})`);
-                    row.push(parseFloat(input.value) || 0);
+                    const input = $(`#matrix-input-${i}-${j}`);
+                    row.push(parseFloat(input.val()) || 0);
                 }
                 matrix.push(row);
             }
-            
-            // Send an AJAX POST request to the Flask server
+
+            const calcType = $('#calculationType').val();
+            const url = `/decompose/${calcType}`;
+
             $.ajax({
-                url: '/decompose',
+                url: url,
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({'matrix': matrix}),
+                data: JSON.stringify({matrix}),
                 success: function(response) {
-                    // Display the response
-                    $('#results').html(`<h2>Matrix Q:</h2><div>$$ ${response.Q} $$</div><h2>Matrix R:</h2><div>$$ ${response.R} $$</div>`);
-                    MathJax.typesetPromise(); // Re-render LaTeX with MathJax
+                    console.log("AJAX Response:", response);
+                    $('#results').empty().append('<h2>Calculation Results:</h2>');
+
+                    if (calcType === 'qr') { // QR DECOMP
+                        $('#results').html(`<h2>Matrix Q:</h2><div>$$ ${response.qr.Q} $$</div><h2>Matrix R:</h2><div>$$ ${response.qr.R} $$</div>`);
+
+                    } else if (calcType === 'gs') { // GRAM 
+                        $('#results').html(`<h2>Orthogonal Vectors:</h2><div>$$ ${response.gs.orthogonal_vectors} $$</div>`);
+                    }
+                    $('#results').append('<h2>Intermediary Steps:</h2>');
+
+                    response.intermediary_steps.explanations.forEach(exp => {
+                        const stepDiv = $('<div class="step-explanation"></div>');
+                        stepDiv.html("\\["+ exp+"\\]"); // Bound with the MathJax identifiers so recongiazble in the html
+                        $('#results').append(stepDiv);
+                    });
+
+                    // Request MathJax to typeset the new content
+                    MathJax.typesetPromise();
                 },
                 error: function(error) {
-                    console.log(error);
+                    console.log("Error:", error);
                 }
             });
         }
 
-        // Initialize the matrix
+        // Initial call to create the default matrix size
         createMatrix();
     </script>
 </body>
