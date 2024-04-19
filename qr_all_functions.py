@@ -32,7 +32,7 @@ def gram_schmidt(vectors):
     
     A = Matrix(vectors)
     if A.rank() < A.cols:
-        steps_explanation.append("\\text{The input matrix is not linearly independent, which is a requirement for our Gram-Schmidt Calculator.}")
+        steps_explanation = ["\\text{The input matrix is not linearly independent, which is a requirement for our Gram-Schmidt Calculator.}"]
         return [], steps_explanation
     
     for i in range(len(vectors[0])):  # Iterate through each column index
@@ -91,7 +91,6 @@ def qr_decomposition(A):
     
     if A.rank() < A.cols:
         qr_steps_explanation = ["\\text{The input matrix is not linearly independent, which is a requirement for our QR decomposition Calculator.}"]
-        print(qr_steps_explanation)
         return [], [], qr_steps_explanation
     
     for j in range(num_cols):
