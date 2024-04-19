@@ -30,6 +30,11 @@ def gram_schmidt(vectors):
     orthogonal = []
     steps_explanation = ["\\text{Gram-Schmidt Orthogonalization Process:}"]
     
+    A = Matrix(vectors)
+    if A.rank() < A.cols:
+        steps_explanation.append("\\text{The input matrix is not linearly independent, which is a requirement for our Gram-Schmidt Calculator.}")
+        return [], steps_explanation
+    
     for i in range(len(vectors[0])):  # Iterate through each column index
         # Extract the ith column as a vector
         v = [row[i] for row in vectors]
@@ -83,6 +88,11 @@ def qr_decomposition(A):
         "\\text{The goal is to decompose the matrix A into an orthogonal matrix Q and an upper triangular matrix R.}",
         "\\text{This is achieved through the Gram-Schmidt process.}"
     ]
+    
+    if A.rank() < A.cols:
+        qr_steps_explanation = ["\\text{The input matrix is not linearly independent, which is a requirement for our QR decomposition Calculator.}"]
+        print(qr_steps_explanation)
+        return [], [], qr_steps_explanation
     
     for j in range(num_cols):
         a_col = A[:, j]
